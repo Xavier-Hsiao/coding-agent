@@ -4,6 +4,8 @@ import os
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from prompts import system_prompt
+from call_function import available_functions, call_function
 
 
 def main():
@@ -36,6 +38,9 @@ def generate_content(
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=messages,
+        config=types.GenerateContentConfig(
+            system_instruction=system_prompt, tools=[available_functions]
+        ),
     )
     if response.usage_metadata is None:
         raise RuntimeError("Failed API call: usage_metadata not found.")
@@ -46,6 +51,26 @@ def generate_content(
 
         print(f"Prompt tokens: {prompt_token_count}")
         print(f"Response tokens: {candidates_token_count}")
+
+    if response.function_calls is not None:
+        for function_call in response.function_calls:
+            function_call_result = call_function(function_call, verbose)
+            if not function_call_result.parts or len(function_call_result.parts) == 0:
+                raise Exception("No valid function result from function call.")
+
+            function_response = function_call_result.parts[0].function_response
+            if not function_response:
+                raise Exception("No valid function response from function call.")
+
+            function_result = function_response.response
+            if not function_result:
+                raise Exception("No valid function result from function call.")
+
+            function_results = []
+            function_results.append(function_call_result.parts[0])
+
+            if verbose:
+                print(f"-> {function_result}")
 
     print(f"Response: {response.text}")
 

@@ -1,5 +1,25 @@
-from genericpath import isdir
+from google.genai import types
+
 import os
+
+schema_write_file = types.FunctionDeclaration(
+    name="write_file",
+    description="Write contents to a specified file.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "file_path": types.Schema(
+                type=types.Type.STRING,
+                description="File path to write contents into, relative to the working directory.",
+            ),
+            "content": types.Schema(
+                type=types.Type.STRING,
+                description="The content to write into the specified file.",
+            ),
+        },
+        required=["file_path", "content"],
+    ),
+)
 
 
 def write_file(working_directory: str, file_path: str, content: str) -> str:
