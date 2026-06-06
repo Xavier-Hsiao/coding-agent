@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 
 from dotenv import load_dotenv
 from google import genai
@@ -29,12 +30,20 @@ def main():
     ]
     if args.verbose:
         print(f"User prompt: {args.user_prompt}\n")
-    generate_content(client, messages, args.verbose)
+
+    done = False
+    for _ in range(20):
+        done = generate_content(client, messages, args.verbose)
+        if done:
+            break
+    if not done:
+        print("The conversation exceeds the turn limits.")
+        sys.exit(1)
 
 
 def generate_content(
     client: genai.Client, messages: list[types.Content], verbose: bool = False
-) -> None:
+) -> bool:
     response = client.models.generate_content(
         model="gemini-2.5-flash",
         contents=messages,
@@ -52,7 +61,13 @@ def generate_content(
         print(f"Prompt tokens: {prompt_token_count}")
         print(f"Response tokens: {candidates_token_count}")
 
-    if response.function_calls is not None:
+    if response.candidates:
+        for candidate in response.candidates:
+            if candidate.content:
+                messages.append(candidate.content)
+
+    function_results = []
+    if response.function_calls:
         for function_call in response.function_calls:
             function_call_result = call_function(function_call, verbose)
             if not function_call_result.parts or len(function_call_result.parts) == 0:
@@ -66,13 +81,19 @@ def generate_content(
             if not function_result:
                 raise Exception("No valid function result from function call.")
 
-            function_results = []
             function_results.append(function_call_result.parts[0])
 
             if verbose:
                 print(f"-> {function_result}")
 
+        messages.append(types.Content(role="user", parts=function_results))
+
+        # we have function_calls in the model's response -> the conversation should continue
+        return False
+
     print(f"Response: {response.text}")
+
+    return True
 
 
 if __name__ == "__main__":

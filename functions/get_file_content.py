@@ -2,8 +2,8 @@ from config import MAX_CHARS
 from google.genai import types
 import os
 
-schema_get_file_contents = types.FunctionDeclaration(
-    name="get_file_contents",
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
     description="Print contents from a specified file.",
     parameters=types.Schema(
         type=types.Type.OBJECT,
@@ -18,7 +18,7 @@ schema_get_file_contents = types.FunctionDeclaration(
 )
 
 
-def get_file_contents(working_directory: str, file_path: str) -> str:
+def get_file_content(working_directory: str, file_path: str) -> str:
     try:
         # check the file is within the working directory
         working_dir_abs = os.path.abspath(working_directory)
